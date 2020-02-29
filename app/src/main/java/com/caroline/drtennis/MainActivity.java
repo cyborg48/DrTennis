@@ -38,83 +38,48 @@ public class MainActivity extends Activity {
     UsbDeviceConnection connection;
     double[] vals = {0.0, 0.0, 0.0};
 
-    /***
+
     ProtocolBuffer buffer = new ProtocolBuffer(ProtocolBuffer.TEXT); //Also Binary
-    buffer.setDelimiter("\r\n");
-     ***/
+
 
     UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() { //Defining a Callback which triggers whenever data is read.
+
         @Override
         public void onReceivedData(byte[] arg0) {
-            String data = null;
-            try {
-                data = new String(arg0, "UTF-8");
-                data.concat("\n");
-                //tvAppend(textView, data);
-                //TextView tv = findViewById(R.id.test);
-                //tv.setText(data);
 
-                try{
-                    if(data.charAt(0) == 'A'){
+            buffer.appendData(arg0);
 
-                        vals[0] = (double)Integer.parseInt(data.substring(1));
+            while (buffer.hasMoreCommands()) {
+                String textCommand = buffer.nextTextCommand();
 
-                    } else if(data.charAt(0) == 'P'){
+                //data = new String(arg0, "UTF-8");
+                //data.concat("\n");
+                //tvAppend(textView, textCommand);
 
-                        vals[1] = Double.parseDouble(data.substring(1));
+                try {
+                    if (textCommand.charAt(0) == 'A') {
 
-                    } else if(data.charAt(0) == 'R'){
+                        vals[0] = Double.parseDouble(textCommand.substring(1));
 
-                        vals[2] = Double.parseDouble(data.substring(1));
+                    } if (textCommand.charAt(0) == 'P') {
+
+                        vals[1] = Double.parseDouble(textCommand.substring(1));
+
+                    } else if (textCommand.charAt(0) == 'R') {
+
+                        vals[2] = Double.parseDouble(textCommand.substring(1));
 
                     }
 
                     update();
-                } catch(Exception f){
+                } catch (Exception f) {
                     //tvAppend(textView, "ERROR" + f.getMessage());
                 }
 
-
-                try{
-
-                    /***
-                    if(data.indexOf('*')!=-1){
-
-                        String[] tempvals = data.split("\\*");
-                        tvAppend(textView, "VALUES: "+ Arrays.toString(tempvals));
-                        vals[0] = (double)Integer.parseInt(tempvals[0]);
-                        vals[1] = Double.parseDouble(tempvals[1]);
-                        vals[2] = Double.parseDouble(tempvals[2]);
-
-                    }
-                     ***/
-
-                    tvAppend(textView, "Acc:  " + vals[0]);
-                    tvAppend(textView, "Pitch:  " + vals[1]);
-                    tvAppend(textView, "Roll:  " + vals[2] + "\n");
-
-
-                } catch(Exception f){
-                    //tvAppend(textView, "ERROR "+f.getMessage());
-
-                }
-
-
-                /***
-
-                acceleration.setText("Acceleration: " + vals[0]);
-                pitch.setText("Pitch: " + vals[1]);
-                roll.setText("Roll: " + vals[2]);
-
-                ***/
-
-            } catch (UnsupportedEncodingException e) {
-                //e.printStackTrace();
-                //test.setText(e.getMessage());
             }
-
-
         }
+
+
     };
 
 
@@ -176,6 +141,8 @@ public class MainActivity extends Activity {
 
 
     public void onClickStart(View view) {
+
+        buffer.setDelimiter("\n");
 
         HashMap<String, UsbDevice> usbDevices = usbManager.getDeviceList();
         if (!usbDevices.isEmpty()) {

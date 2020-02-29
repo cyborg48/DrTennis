@@ -24,18 +24,24 @@ import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
     public final String ACTION_USB_PERMISSION = "com.caroline.DrTennis.USB_PERMISSION";
-    TextView acceleration, pitch, roll, test;
+    TextView acceleration, pitch, roll, test, textView;
     EditText editText;
     UsbManager usbManager;
     UsbDevice device;
     UsbSerialDevice serialPort;
     UsbDeviceConnection connection;
-    int[] vals = new int[3];
+    double[] vals = {0.0, 0.0, 0.0};
+
+    /***
+    ProtocolBuffer buffer = new ProtocolBuffer(ProtocolBuffer.TEXT); //Also Binary
+    buffer.setDelimiter("\r\n");
+     ***/
 
     UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() { //Defining a Callback which triggers whenever data is read.
         @Override
@@ -43,33 +49,75 @@ public class MainActivity extends Activity {
             String data = null;
             try {
                 data = new String(arg0, "UTF-8");
-                data.concat("/n");
+                data.concat("\n");
                 //tvAppend(textView, data);
-                test.setText(data);
-                String temp = "";
-                int i = 0;
-                for(int j = 0; j < data.length(); j++){
-                    while(data.charAt(i) != '*'){
-                        temp += data.charAt(i);
-                        i++;
+                //TextView tv = findViewById(R.id.test);
+                //tv.setText(data);
+
+                try{
+                    if(data.charAt(0) == 'A'){
+
+                        vals[0] = (double)Integer.parseInt(data.substring(1));
+
+                    } else if(data.charAt(0) == 'P'){
+
+                        vals[1] = Double.parseDouble(data.substring(1));
+
+                    } else if(data.charAt(0) == 'R'){
+
+                        vals[2] = Double.parseDouble(data.substring(1));
+
                     }
-                    vals[j] = Integer.parseInt(temp);
-                    temp = "";
-                    i++;
+
+                    update();
+                } catch(Exception f){
+                    //tvAppend(textView, "ERROR" + f.getMessage());
                 }
+
+
+                try{
+
+                    /***
+                    if(data.indexOf('*')!=-1){
+
+                        String[] tempvals = data.split("\\*");
+                        tvAppend(textView, "VALUES: "+ Arrays.toString(tempvals));
+                        vals[0] = (double)Integer.parseInt(tempvals[0]);
+                        vals[1] = Double.parseDouble(tempvals[1]);
+                        vals[2] = Double.parseDouble(tempvals[2]);
+
+                    }
+                     ***/
+
+                    tvAppend(textView, "Acc:  " + vals[0]);
+                    tvAppend(textView, "Pitch:  " + vals[1]);
+                    tvAppend(textView, "Roll:  " + vals[2] + "\n");
+
+
+                } catch(Exception f){
+                    //tvAppend(textView, "ERROR "+f.getMessage());
+
+                }
+
+
+                /***
 
                 acceleration.setText("Acceleration: " + vals[0]);
                 pitch.setText("Pitch: " + vals[1]);
                 roll.setText("Roll: " + vals[2]);
 
+                ***/
 
             } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+                //test.setText(e.getMessage());
             }
 
 
         }
     };
+
+
     private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { //Broadcast Receiver to automatically start and stop the Serial connection.
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -86,16 +134,16 @@ public class MainActivity extends Activity {
                             serialPort.setParity(UsbSerialInterface.PARITY_NONE);
                             serialPort.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF);
                             serialPort.read(mCallback);
-                            //tvAppend(textView,"Serial Connection Opened!\n");
+                            tvAppend(textView,"Serial Connection Opened!\n");
 
                         } else {
-                            Log.d("SERIAL", "PORT NOT OPEN");
+                            tvAppend(textView, "PORT NOT OPEN");
                         }
                     } else {
-                        Log.d("SERIAL", "PORT IS NULL");
+                        tvAppend(textView, "PORT IS NULL");
                     }
                 } else {
-                    Log.d("SERIAL", "PERM NOT GRANTED");
+                    tvAppend(textView, "PERM NOT GRANTED");
                 }
             } else if (intent.getAction().equals(UsbManager.ACTION_USB_DEVICE_ATTACHED)) {
                 //onClickStart(startButton);
@@ -114,6 +162,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         usbManager = (UsbManager) getSystemService(this.USB_SERVICE);
         test = findViewById(R.id.test);
+        textView = findViewById(R.id.textView);
         acceleration = findViewById(R.id.acceleration);
         pitch = findViewById(R.id.pitch);
         roll = findViewById(R.id.roll);
@@ -122,7 +171,6 @@ public class MainActivity extends Activity {
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         registerReceiver(broadcastReceiver, filter);
-
 
     }
 
@@ -149,9 +197,8 @@ public class MainActivity extends Activity {
                     break;
             }
         }
-
-
     }
+
 
     private void tvAppend(TextView tv, CharSequence text) {
         final TextView ftv = tv;
@@ -163,6 +210,24 @@ public class MainActivity extends Activity {
                 ftv.append(ftext);
             }
         });
+    }
+
+    private void tvWrite(TextView tv, CharSequence text) {
+        final TextView ftv = tv;
+        final CharSequence ftext = text;
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ftv.setText(ftext);
+            }
+        });
+    }
+
+    private void update(){
+        tvWrite(acceleration, Double.toString(vals[0]));
+        tvWrite(pitch, Double.toString(vals[1]));
+        tvWrite(roll, Double.toString(vals[2]));
     }
 
 }
